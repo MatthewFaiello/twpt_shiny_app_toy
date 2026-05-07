@@ -1,4 +1,5 @@
 # ==== STEP 3: server.R ====
+#
 # This file is the reactive wiring for the app.
 #
 # This is where the app connects:
@@ -6,157 +7,289 @@
 # - output objects going back to ui.R
 #
 # In this app:
-# - input$scope_1 = the selected county
-# - input$scope_2 = the selected LEA
+# - input$scope_1 = selected county
+# - input$scope_2 = selected LEA
+# - input$forecast_year = selected forecast end year
+# - input$matriculation = target matriculation value
+# - input$students_per_teacher = target students-per-teacher value
+# - input$metric = selected metric for the plot
 #
 # And the outputs sent back to the UI are:
+# - output$current_values_note
 # - output$main_plot
 # - output$scope_note
 # - output$detail_table
 # - output$download_data
-#
-# The easiest way to remember this file:
-# - req() waits until some value is available
-# - reactive() computes live values that should update automatically
-# - observeEvent() takes an action when something changes
-# - render*() turns reactive values into visible outputs
+
 
 server <-
   function(input, output, session) {
     
-    # ==== reactive(): live LEA-choice generator ====
-    # This reactive expression builds the valid LEA list for the selected county.
+    
+    # ==== LEA CHOICES ====
+    
+    # lea_choices() returns the valid LEA choices for the selected county.
     #
-    # What it does:
-    # - waits until the county input exists
-    # - filters APP_DATA to that county
-    # - pulls the distinct LEA names
-    # - returns the sorted set of valid choices
-    #
-    # So lea_choices() is a reusable "county -> LEA list" calculator.
+    # The helper scope_2_choices_filtered() lives in global.R.
+    
     lea_choices <-
-      reactive({req(input$scope_1)
+      reactive({
+        req(input$scope_1)
         
-        APP_DATA %>%
-          filter(County_Name == input$scope_1) %>%
-          distinct(lea) %>%
-          pull(lea) %>%
-          sort()
+        scope_2_choices_filtered(
+          data = APP_DATA,
+          scope_1 = input$scope_1
+        )
       })
     
-    # ==== observeEvent(): when county changes, update LEA dropdown ====
-    # This observer does not return a value for reuse.
-    # Instead, it performs an action in the interface.
-    #
-    # Meaning:
-    # - when the county changes
-    # - recompute the valid LEA choices
-    # - push those new choices into the scope_2 dropdown
-    # - default to the first LEA in the updated list
-    #
-    # Memory trick:
-    # - lea_choices() computes
-    # - observeEvent(input$scope_1, ...) acts
+    
+    # ==== UPDATE LEA DROPDOWN WHEN COUNTY CHANGES ====
+    
+    # When the selected county changes, update the LEA dropdown.
+    # The app selects the first LEA in the selected county by default.
+    
     observeEvent(input$scope_1, {
+      
       choices <- lea_choices()
       
-      updateSelectizeInput(session = session,
-                           inputId = "scope_2",
-                           choices = choices,
-                           selected = choices[1],
-                           server = T)
+      updateSelectizeInput(
+        session = session,
+        inputId = "scope_2",
+        choices = choices,
+        selected = choices[1],
+        server = TRUE
+      )
     })
     
-    # ==== reactive(): the central filtered dataset ====
-    # This is the main reactive object in the app.
-    #
-    # It waits until both sidebar filters exist, then calls data_filtered()
-    # from global.R to return only the rows for the selected:
-    # - county
-    # - LEA
-    #
-    # This matters because several outputs all depend on the same filtered data.
-    # Instead of rewriting the filtering logic in multiple places, the app
-    # computes it once here and reuses it everywhere else.
-    filtered_data <-
-      reactive({req(input$scope_1, input$scope_2)
-        
-        data_filtered(data = APP_DATA,
-                      scope_1 = input$scope_1,
-                      scope_2 = input$scope_2)
-      })
     
-    # ==== reactive(): table-ready version of the filtered data ====
-    # This is a small helper reactive used by both:
-    # - the DT table
-    # - the download button
+    # ==== CURRENT OBSERVED ROW ====
+    
+    # selected_current_row() finds the current observed row for the selected LEA.
     #
-    # It takes the filtered rows and passes them to underlying_data() in global.R,
-    # which formats the columns for display.
-    table_data <-
+    # The app uses this to:
+    # - show the current values in the sidebar note
+    # - reset the opening forecast assumptions when the user changes LEA
+    
+    selected_current_row <-
       reactive({
-        dat <- filtered_data()
-        underlying_data(dat)
+        req(input$scope_1, input$scope_2)
+        
+        APP_DATA %>%
+          filter(
+            SchoolYear == CURRENT_YEAR,
+            County_Name == input$scope_1,
+            lea == input$scope_2,
+            rowType == "Observed LEA data"
+          )
       })
     
-    # ==== output$main_plot + renderPlot() ====
+    
+    # ==== UPDATE ASSUMPTION INPUTS WHEN LEA CHANGES ====
+    
+    # When the selected LEA changes, use that LEA's current values
+    # to set simple starting target assumptions.
+    #
+    # The target matriculation value starts slightly above the current value.
+    # The target students-per-teacher value starts slightly below the current value.
+    #
+    # These are just opening assumptions.
+    # Users can edit them in the sidebar.
+    
+    observeEvent(input$scope_2, {
+      
+      row <- selected_current_row()
+      
+      if (nrow(row) == 1) {
+        
+        if (!is.na(row$matriculation)) {
+          updateNumericInput(
+            session = session,
+            inputId = "matriculation",
+            value = round(row$matriculation, 3)
+          )
+        }
+        
+        if (!is.na(row$StudentsPerTeacher)) {
+          updateNumericInput(
+            session = session,
+            inputId = "students_per_teacher",
+            value = round(row$StudentsPerTeacher, 1)
+          )
+        }
+      }
+    })
+    
+    
+    # ==== CURRENT VALUES NOTE ====
+    
+    # This sidebar note helps users understand the target inputs.
+    # It shows the current observed values for the selected LEA.
+    
+    output$current_values_note <-
+      renderText({
+        
+        row <- selected_current_row()
+        
+        req(nrow(row) == 1)
+        
+        paste0(
+          "Current observed values in ",
+          CURRENT_YEAR,
+          ": matriculation = ",
+          round(row$matriculation, 3),
+          "; students per teacher = ",
+          round(row$StudentsPerTeacher, 1),
+          "."
+        )
+      })
+    
+    
+    # ==== RUN FORECAST ENGINE ====
+    
+    # selected_forecast_data() is the central reactive dataset.
+    #
+    # It calls make_forecast_data() from global.R.
+    # That helper runs the full app forecast engine:
+    # - filter selected LEA
+    # - forecast matriculation and StudentsPerTeacher
+    # - estimate future student and teacher totals
+    
+    selected_forecast_data <-
+      reactive({
+        req(
+          input$scope_1,
+          input$scope_2,
+          input$forecast_year,
+          input$matriculation,
+          input$students_per_teacher
+        )
+        
+        req(input$forecast_year > CURRENT_YEAR)
+        req(input$matriculation >= 0)
+        req(input$matriculation <= 1)
+        req(input$students_per_teacher > 0)
+        
+        make_forecast_data(
+          data = APP_DATA,
+          scope_1 = input$scope_1,
+          scope_2 = input$scope_2,
+          begin = CURRENT_YEAR,
+          end = input$forecast_year,
+          mat = input$matriculation,
+          ratio = input$students_per_teacher
+        )
+      })
+    
+    
+    # ==== TABLE DATA ====
+    
+    # selected_table_data() formats the forecast data for display
+    # and download.
+    #
+    # It uses forecast_table_data() from global.R.
+    
+    selected_table_data <-
+      reactive({
+        
+        forecast_table_data(
+          data = selected_forecast_data()
+        )
+      })
+    
+    
+    # ==== PLOT OUTPUT ====
+    
     # This sends the main plot back to plotOutput("main_plot") in ui.R.
     #
-    # The plotting code itself lives in global.R inside plot_staffing_trend().
-    # So server.R is not building the chart directly. It is handing the filtered
-    # data to a helper function and returning the finished plot.
-    #
-    # In this app, the plot is a longitudinal line chart of StudentsPerTeacher
-    # across school years for the selected LEA.
+    # The plotting code itself lives in global.R inside
+    # plot_staffing_forecast().
+    
     output$main_plot <-
       renderPlot({
-        dat <- filtered_data()
-        plot_staffing_trend(dat)
-      }, res = 125)
+        
+        plot_staffing_forecast(
+          data = selected_forecast_data(),
+          metric = input$metric
+        )
+      }, res = 100)
     
-    # ==== output$scope_note + renderText() ====
+    
+    # ==== SCOPE NOTE OUTPUT ====
+    
     # This sends a text summary back to textOutput("scope_note") in ui.R.
     #
     # The text is created by make_scope_note() in global.R.
-    # Its job is to remind the user which LEA and county they are viewing.
+    
     output$scope_note <-
       renderText({
-        dat <- filtered_data()
-        make_scope_note(dat)
+        
+        make_scope_note(
+          data = selected_forecast_data(),
+          metric = input$metric
+        )
       })
     
-    # ==== output$detail_table + renderDT() ====
-    # This sends the formatted data table back to DTOutput("detail_table") in ui.R.
-    #
-    # It uses:
-    # - table_data() for the prepared dataset
-    # - datatable() from DT for the interactive display
-    #
-    # So this is the app's table-rendering step.
+    
+    # ==== DETAIL TABLE OUTPUT ====
+    
+    # This sends the formatted forecast table back to DTOutput("detail_table").
+    
     output$detail_table <-
       renderDT({
-        dat <- table_data()
         
-        datatable(dat,
-                  rownames = F,
-                  filter = "top",
-                  options = list(pageLength = nrow(dat),
-                                 autoWidth = T,
-                                 scrollX = T,
-                                 dom = "ti"))
+        forecast_dt(
+          data = selected_table_data()
+        )
       })
     
-    # ==== output$download_data + downloadHandler() ====
-    # This creates the downloadable CSV tied to the current filters.
+    
+    # ==== DOWNLOAD OUTPUT ====
+    
+    # This creates the downloadable CSV tied to the current filters
+    # and forecast assumptions.
     #
     # Important idea:
-    # the download uses the same reactive table_data() object as the table tab.
-    # That keeps the displayed data and the downloaded data in sync.
+    # the download uses the same selected_table_data() object as the table tab.
+    # That keeps the displayed data and downloaded data in sync.
+    
     output$download_data <-
       downloadHandler(
-        filename = function() {paste0("twpt_filtered_data_", Sys.Date(), ".csv")},
-        content = function(file) {write_csv(table_data(), file)})
+        
+        filename =
+          function() {
+            
+            safe_county <-
+              str_replace_all(
+                input$scope_1,
+                "[^A-Za-z0-9]+",
+                "_"
+              )
+            
+            safe_lea <-
+              str_replace_all(
+                input$scope_2,
+                "[^A-Za-z0-9]+",
+                "_"
+              )
+            
+            paste0(
+              "staffing_forecast_",
+              safe_county,
+              "_",
+              safe_lea,
+              "_",
+              Sys.Date(),
+              ".csv"
+            )
+          },
+        
+        content =
+          function(file) {
+            
+            write_csv(
+              selected_table_data(),
+              file
+            )
+          }
+      )
   }
-
-
-

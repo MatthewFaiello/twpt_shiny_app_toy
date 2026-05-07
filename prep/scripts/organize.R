@@ -16,9 +16,6 @@
 # That means the future rows only contain county population projections.
 # They do not contain future student totals or future teacher totals.
 #
-# For the toy Shiny app, we copy each future county projection to each LEA
-# in that county. This helps the app keep a consistent county / LEA structure.
-#
 # Important:
 # This does not create true future LEA estimates.
 
@@ -65,7 +62,7 @@ output_path <- file.path(output_folder, "APP_DATA.rds")
 # Read the raw TWPT file.
 # This is the starting point for the app data pipeline.
 
-twpt_raw <- read_csv(raw_data_path)
+twpt_raw <- read_csv(raw_data_path, show_col_types = FALSE)
 
 
 # ==== SEPARATE OBSERVED AND FUTURE ROWS ====
@@ -76,7 +73,8 @@ twpt_raw <- read_csv(raw_data_path)
 observed_lea_rows <-
   twpt_raw %>%
   filter(
-    !is.na(lea)
+    !is.na(lea),
+    lea != ""
   ) %>%
   mutate(
     rowType = "Observed LEA data"
@@ -90,7 +88,7 @@ observed_lea_rows <-
 future_county_rows <-
   twpt_raw %>%
   filter(
-    is.na(lea)
+    is.na(lea) | lea == ""
   ) %>%
   select(
     SchoolYear,
@@ -119,13 +117,13 @@ lea_lookup <-
 # The future projection rows are county-level.
 #
 # Example:
-# If Kent County has one future projection row for 2030,
+# Kent County has one future projection row for 2030,
 # and Kent County has several LEAs,
 # this step creates one 2030 display row for each Kent County LEA.
 #
 # These rows still do not have future student or teacher totals.
 
-future_lea_display_rows <-
+future_lea_rows <-
   future_county_rows %>%
   left_join(
     lea_lookup,
@@ -145,16 +143,13 @@ future_lea_display_rows <-
 #
 # Then keep only the fields the app needs.
 #
-# StudentsPerTeacher and PopulationPerStudent are example metrics
-#
-# Both metrics are only available for observed LEA rows.
-# Future rows have county population projections, but they do not have
-# future student totals or future teacher totals.
+# matriculation and StudentsPerTeacher are example metrics
+# that the Shiny app can use as forecasting assumptions.
 
 APP_DATA <-
   bind_rows(
     observed_lea_rows,
-    future_lea_display_rows
+    future_lea_rows
   ) %>%
   transmute(
     SchoolYear,
@@ -174,14 +169,19 @@ APP_DATA <-
     studentTotal,
     teacherTotal,
     
-    PopulationPerStudent = if_else(
-      !is.na(studentTotal) & studentTotal > 0,
-      population / studentTotal,
+    matriculation = if_else(
+      !is.na(studentTotal) &
+        studentTotal > 0 &
+        !is.na(population) &
+        population > 0,
+      studentTotal / population,
       NA_real_
     ),
     
     StudentsPerTeacher = if_else(
-      !is.na(teacherTotal) & teacherTotal > 0,
+      !is.na(studentTotal) &
+        !is.na(teacherTotal) &
+        teacherTotal > 0,
       studentTotal / teacherTotal,
       NA_real_
     )
@@ -200,7 +200,11 @@ APP_DATA <-
 #
 # The folder is created if it does not already exist.
 
-dir.create(output_folder)
+dir.create(
+  output_folder,
+  showWarnings = FALSE,
+  recursive = TRUE
+)
 
 write_rds(APP_DATA, output_path)
 
