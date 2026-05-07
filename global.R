@@ -103,10 +103,16 @@ SCOPE_2_CHOICES <-
 
 # ==== DEFAULTS ====
 
+DEFAULTS_CHOICES <-
+  APP_DATA %>% 
+  distinct(County_Name, lea) %>% 
+  arrange(County_Name, lea) %>% 
+  slice(1)
+
 DEFAULTS <-
   list(
-    scope_1 = "New Castle",
-    scope_2 = "Appoquinimink School District"
+    scope_1 = DEFAULTS_CHOICES$County_Name,
+    scope_2 = DEFAULTS_CHOICES$lea
   )
 
 

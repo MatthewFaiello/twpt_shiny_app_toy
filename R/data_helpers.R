@@ -35,3 +35,4 @@ scope_2_choices_filtered <-
       arrange(lea) %>%
       pull(lea)
   }
+

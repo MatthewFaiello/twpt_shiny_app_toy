@@ -11,7 +11,21 @@
 # - teacherTotal
 
 
-# ==== ASSUMPTION CHANGE RATES ====
+# ==== COMPOUND ANNUAL GROWTH FACTORS ====
+
+# mat and ratio are the user's target values in the forecast end year.
+# They are not annual growth rates.
+#
+# This function calculates the compound annual growth factor needed
+# to move from the current observed value to the user's target value
+# over the forecast period.
+#
+# Formula:
+# annualMultiplier = 
+# (Target Value / Current Value) ^ (1 / (Target Year - Current Year))
+#
+# In this app, annualMultiplier is the growth factor.
+# annualPercentChange is the growth rate.
 
 calculate_growth_factors <- 
   function(data = data_filtered(),
@@ -28,11 +42,10 @@ calculate_growth_factors <-
     
     start_row <-
       data %>%
-      filter(SchoolYear == begin) %>%
-      slice(1)
+      filter(SchoolYear == begin)
     
-    if (nrow(start_row) == 0) {
-      stop("The selected data does not have a row for the begin year.")
+    if (nrow(start_row) != 1) {
+      stop("Check start_row. There should only be 1 row.")
     }
     
     start_matriculation <- start_row$matriculation
@@ -99,6 +112,9 @@ predict_model <-
     
     # Use the future population values prepared by organize.R.
     # We do not forecast population here.
+    #
+    # The future population values are county-level projections
+    # that were copied into each LEA display path during data prep.
     
     future_population <-
       future_years %>%
@@ -139,6 +155,9 @@ predict_model <-
         names_from = name,
         values_from = value
       )
+    
+    # Student and teacher totals start as missing in the forecast rows.
+    # demand() fills them in after the assumption values have been forecasted.
     
     forecast_rows <-
       future_population %>%
@@ -202,6 +221,10 @@ predict_model <-
 
 # ==== ESTIMATE STUDENT AND TEACHER DEMAND ====
 
+# This is the final modeling step.
+# The app first forecasts assumptions, then converts those assumptions
+# into estimated student and teacher totals.
+
 demand <- 
   function(data = predict_model()) {
     
@@ -231,6 +254,10 @@ demand <-
 
 
 # ==== RUN FORECAST ENGINE ====
+
+# This wrapper keeps server.R simple.
+# server.R passes user inputs here, and this function returns one
+# forecast-ready dataset for the plot, table, and download.
 
 make_forecast_data <-
   function(data = APP_DATA,

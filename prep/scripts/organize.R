@@ -18,6 +18,8 @@
 #
 # Important:
 # This does not create true future LEA estimates.
+# The copied future rows carry county population values forward for 
+# future use.
 
 
 # ==== SETUP ====
@@ -122,6 +124,7 @@ lea_lookup <-
 # this step creates one 2030 display row for each Kent County LEA.
 #
 # These rows still do not have future student or teacher totals.
+# They mainly carry future county population into each LEA display path.
 
 future_lea_rows <-
   future_county_rows %>%

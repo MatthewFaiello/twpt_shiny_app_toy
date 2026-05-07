@@ -1,4 +1,4 @@
-# TWPT Shiny App Toy
+# TWPT Shiny App Training App
 
 An instructional Shiny app that shows how to prepare education data, organize app logic, and build a simple staffing forecast from user inputs.
 
@@ -15,7 +15,7 @@ The forecast uses two app inputs:
 
 The app uses a yearly growth factor to move from the current observed value to the user's target value. It then estimates future student totals and teacher totals.
 
-This is a toy instructional app. It is not meant to produce official enrollment or staffing projections.
+This is an instructional demo app. It is not meant to produce official enrollment or staffing projections.
 
 ## Project structure
 
@@ -243,7 +243,7 @@ Or click **Run App** in RStudio.
 
 ## Teaching notes
 
-This app is designed to demonstrate several common Shiny app patterns:
+This app is designed to demonstrate several common Shiny app patterns in a flat, linear workflow:
 
 - separating data prep from app logic
 - using `global.R` for shared setup
@@ -294,7 +294,7 @@ When updating the project:
 
 ## File naming convention
 
-The helper files are numbered so learners can read them in order:
+The helper files are ordered conceptually so learners can read them in sequence:
 
 ```text
 theme_values.R
@@ -304,4 +304,4 @@ plot_helpers.R
 table_helpers.R
 ```
 
-This makes the app logic easier to follow during instruction.
+This keeps the app logic easier to follow during instruction.

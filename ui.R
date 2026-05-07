@@ -1,13 +1,10 @@
 # ==== STEP 4: ui.R ====
 #
 # This file controls what people see.
-#
-# This is the last step in the full app flow:
 # - display the sidebar controls
 # - display the output placeholders
 # - arrange the app into a sidebar + tabbed main panel layout
 #
-# Main idea to remember:
 # ui.R defines the visible structure of the app.
 # If you rename an input or output id here, you must rename it in server.R too.
 

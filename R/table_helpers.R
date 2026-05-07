@@ -33,7 +33,7 @@ forecast_table_data <-
 forecast_dt <-
   function(data = forecast_table_data()) {
     
-    DT::datatable(
+    datatable(
       data,
       rownames = FALSE,
       options = list(

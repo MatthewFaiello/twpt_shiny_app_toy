@@ -30,7 +30,8 @@ server <-
     
     # lea_choices() returns the valid LEA choices for the selected county.
     #
-    # The helper scope_2_choices_filtered() lives in global.R.
+    # scope_2_choices_filtered() lives in R/data_helpers.R.
+    # global.R sources that file before server.R runs.
     
     lea_choices <-
       reactive({
@@ -86,14 +87,8 @@ server <-
     
     # ==== UPDATE ASSUMPTION INPUTS WHEN LEA CHANGES ====
     
-    # When the selected LEA changes, use that LEA's current values
-    # to set simple starting target assumptions.
-    #
-    # The target matriculation value starts slightly above the current value.
-    # The target students-per-teacher value starts slightly below the current value.
-    #
-    # These are just opening assumptions.
-    # Users can edit them in the sidebar.
+    # When the selected LEA changes, reset the target assumptions
+    # to that LEA's current observed values.
     
     observeEvent(input$scope_2, {
       
@@ -148,7 +143,9 @@ server <-
     
     # selected_forecast_data() is the central reactive dataset.
     #
-    # It calls make_forecast_data() from global.R.
+    # It calls make_forecast_data(), which lives in R/forecast_engine.R.
+    # global.R sources that helper before server.R uses it.
+    #
     # That helper runs the full app forecast engine:
     # - filter selected LEA
     # - forecast matriculation and StudentsPerTeacher
@@ -186,7 +183,7 @@ server <-
     # selected_table_data() formats the forecast data for display
     # and download.
     #
-    # It uses forecast_table_data() from global.R.
+    # It uses forecast_table_data(), which lives in R/table_helpers.R.
     
     selected_table_data <-
       reactive({
@@ -201,8 +198,8 @@ server <-
     
     # This sends the main plot back to plotOutput("main_plot") in ui.R.
     #
-    # The plotting code itself lives in global.R inside
-    # plot_staffing_forecast().
+    # The plotting code itself lives in R/plot_helpers.R
+    # inside plot_staffing_forecast().
     
     output$main_plot <-
       renderPlot({
@@ -218,7 +215,8 @@ server <-
     
     # This sends a text summary back to textOutput("scope_note") in ui.R.
     #
-    # The text is created by make_scope_note() in global.R.
+    # The text is created by make_scope_note(), which lives
+    # in R/plot_helpers.R.
     
     output$scope_note <-
       renderText({

@@ -6,7 +6,7 @@
 # ==== METRIC LABELS ====
 
 metric_label <-
-  function(metric = "StudentsPerTeacher") {
+  function(metric = "teacherTotal") {
     
     case_when(
       metric == "StudentsPerTeacher" ~ "Students per Teacher",
@@ -93,7 +93,7 @@ make_plot_data <-
 
 plot_staffing_forecast <-
   function(data = make_forecast_data(),
-           metric = "StudentsPerTeacher") {
+           metric = "teacherTotal") {
     
     plot_dat <-
       make_plot_data(data)
@@ -170,7 +170,7 @@ plot_staffing_forecast <-
 
 make_scope_note <-
   function(data = make_forecast_data(),
-           metric = "StudentsPerTeacher") {
+           metric = "teacherTotal") {
     
     county <-
       data %>%
