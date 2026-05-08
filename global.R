@@ -58,7 +58,7 @@ LABELS <-
     scope_1 = "County",
     scope_2 = "LEA",
     tab_plot = "Forecast plot",
-    tab_data = "Underlying data"
+    tab_data = "Underlying data" # <- Edit tab title here
   )
 
 

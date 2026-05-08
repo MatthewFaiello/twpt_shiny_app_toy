@@ -147,24 +147,10 @@ ui <-
         
         hr(),
         
-        h4("Display"),
-        
         # This lets the user choose what metric to plot.
         # The selected value is sent to server.R as input$metric.
         
-        selectInput(
-          inputId = "metric",
-          label = "Metric to plot",
-          choices =
-            c(
-              "Population" = "population",
-              "Matriculation" = "matriculation",
-              "Students per Teacher" = "StudentsPerTeacher",
-              "Student Total" = "studentTotal",
-              "Teacher Total" = "teacherTotal"
-            ),
-          selected = "population"
-        ),
+        # <- Code here
         
         hr(),
         
@@ -193,19 +179,9 @@ ui <-
         plotOutput(
           outputId = "main_plot"
         )
-      ),
-      
-      nav_panel(
-        LABELS$tab_data,
-        
-        div(
-          class = "table-intro",
-          p(
-            "This table shows the observed and forecasted values behind the chart."
-          )
-        ),
-        
-        DTOutput("detail_table")
       )
+      
+      # <- Code here
+      
     )
   )
