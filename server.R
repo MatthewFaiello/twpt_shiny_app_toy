@@ -206,7 +206,7 @@ server <-
         
         plot_staffing_forecast(
           data = selected_forecast_data(),
-          metric = "population"
+          metric = input$metric
         )
       }, res = 100)
     
@@ -223,7 +223,7 @@ server <-
         
         make_scope_note(
           data = selected_forecast_data(),
-          metric = "population"
+          metric = input$metric
         )
       })
     
@@ -232,7 +232,14 @@ server <-
     
     # This sends the formatted forecast table back to DTOutput("detail_table").
     
-    # <- Code here
+    output$detail_table <-
+      renderDT({
+        
+        forecast_dt(
+          data = selected_table_data()
+        )
+      })
+    
     
     # ==== DOWNLOAD OUTPUT ====
     
